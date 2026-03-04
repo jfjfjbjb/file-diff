@@ -11,9 +11,7 @@
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.2.1",
-    "@types/diff-match-patch": "^1.0.36",
     "autoprefixer": "^10.4.16",
-    "diff-match-patch": "^1.0.5",
     "postcss": "^8.4.31",
     "react": "^19.2.0",
     "react-diff-viewer-continued": "^4.1.2",

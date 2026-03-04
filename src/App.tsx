@@ -1,18 +1,24 @@
 import { useState } from 'react';
 import FileDiff from './components/FileDiff';
-import type { DiffItem } from './components/FileDiff';
-import { diff_match_patch } from 'diff-match-patch';
 
+/**
+ * 主应用组件
+ */
 function App() {
+  // 状态管理
   const [files, setFiles] = useState<File[]>([]);
-  const [diffResult, setDiffResult] = useState<DiffItem[]>([]);
+  const [fileContents, setFileContents] = useState<{ content1: string; content2: string } | null>(null);
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [uploadKey, setUploadKey] = useState<number>(0);
   const [warningMessage, setWarningMessage] = useState<string>('');
   
+  // 常量定义
   const SUPPORTED_EXTENSIONS = ['.txt', '.md', '.js', '.ts', '.jsx', '.tsx', '.css', '.scss', '.html', '.json', '.xml', '.csv', '.log', '.py', '.java', '.c', '.cpp', '.h', '.hpp'];
   const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
+  /**
+   * 处理多个文件选择
+   */
   const handleMultipleFileChange = (selectedFiles: File[]) => {
     setErrorMessage('');
     setWarningMessage('');
@@ -20,6 +26,7 @@ function App() {
     const validFiles: File[] = [];
     const warnings: string[] = [];
     
+    // 验证文件
     for (const file of selectedFiles) {
       const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase() || '';
       const isSupported = SUPPORTED_EXTENSIONS.includes(fileExtension);
@@ -43,10 +50,12 @@ function App() {
       validFiles.push(file);
     }
     
+    // 处理警告信息
     if (warnings.length > 0) {
       setWarningMessage(warnings.join('\n'));
     }
     
+    // 处理无效文件
     if (validFiles.length === 0) {
       if (warnings.length === 0) {
         setErrorMessage('请上传有效的文件');
@@ -54,9 +63,11 @@ function App() {
       return;
     }
     
+    // 更新文件列表，最多保留2个文件
     const newFiles = [...files, ...validFiles].slice(0, 2);
     setFiles(newFiles);
     
+    // 处理文件数量不足的情况
     if (newFiles.length < 2) {
       setErrorMessage(`已选择 ${newFiles.length} 个文件，还需选择 ${2 - newFiles.length} 个文件`);
       return;
@@ -64,6 +75,7 @@ function App() {
     
     setErrorMessage('');
     
+    // 读取文件内容
     const [file1, file2] = newFiles;
     
     Promise.all([
@@ -84,77 +96,42 @@ function App() {
         reader2.readAsText(file2);
       })
     ]).then(([content1, content2]) => {
-      
-      const dmp = new diff_match_patch();
-      const diffs = dmp.diff_main(content1, content2);
-      dmp.diff_cleanupSemantic(diffs);
-      
-      const lineDiffs: DiffItem[] = [];
-      
-      let line1Index = 0;
-      let line2Index = 0;
-      
-      for (const [type, text] of diffs) {
-        const lines = text.split('\n');
-        for (let i = 0; i < lines.length; i++) {
-          const line = lines[i];
-          if (!line && i === lines.length - 1) continue;
-          
-          if (type === -1) {
-            lineDiffs.push({
-              type: 'remove',
-              line1: line1Index + 1,
-              line2: null,
-              content: line
-            });
-            line1Index++;
-          } else if (type === 1) {
-            lineDiffs.push({
-              type: 'add',
-              line1: null,
-              line2: line2Index + 1,
-              content: line
-            });
-            line2Index++;
-          } else {
-            lineDiffs.push({
-              type: 'neutral',
-              line1: line1Index + 1,
-              line2: line2Index + 1,
-              content: line
-            });
-            line1Index++;
-            line2Index++;
-          }
-        }
-      }
-      
-      setDiffResult(lineDiffs);
+      // 直接存储文件内容，由FileDiff组件处理差异
+      setFileContents({ content1, content2 });
     });
   };
 
+  /**
+   * 清空所有文件和结果
+   */
   const handleClearAll = () => {
     setFiles([]);
-    setDiffResult([]);
+    setFileContents(null);
     setErrorMessage('');
     setWarningMessage('');
     setUploadKey(prev => prev + 1);
   };
 
+  /**
+   * 移除指定索引的文件
+   */
   const handleRemoveFile = (index: number) => {
     const newFiles = files.filter((_, i) => i !== index);
     setFiles(newFiles);
     
     if (newFiles.length === 0) {
-      setDiffResult([]);
+      // 清空所有状态
+      setFileContents(null);
       setErrorMessage('');
       setWarningMessage('');
       setUploadKey(prev => prev + 1);
     } else if (newFiles.length < 2) {
-      setDiffResult([]);
+      // 文件数量不足，清空差异结果
+      setFileContents(null);
       setErrorMessage(`已选择 ${newFiles.length} 个文件，还需选择 ${2 - newFiles.length} 个文件`);
       setWarningMessage('');
     } else {
+      // 文件数量足够，重新读取文件内容
       setErrorMessage('');
       setWarningMessage('');
       
@@ -178,51 +155,8 @@ function App() {
           reader2.readAsText(file2);
         })
       ]).then(([content1, content2]) => {
-        
-        const dmp = new diff_match_patch();
-        const diffs = dmp.diff_main(content1, content2);
-        dmp.diff_cleanupSemantic(diffs);
-        
-        const lineDiffs: DiffItem[] = [];
-        let line1Index = 0;
-        let line2Index = 0;
-        
-        for (const [type, text] of diffs) {
-          const lines = text.split('\n');
-          for (let i = 0; i < lines.length; i++) {
-            const line = lines[i];
-            if (!line && i === lines.length - 1) continue;
-            
-            if (type === -1) {
-              lineDiffs.push({
-                type: 'remove',
-                line1: line1Index + 1,
-                line2: null,
-                content: line
-              });
-              line1Index++;
-            } else if (type === 1) {
-              lineDiffs.push({
-                type: 'add',
-                line1: null,
-                line2: line2Index + 1,
-                content: line
-              });
-              line2Index++;
-            } else {
-              lineDiffs.push({
-                type: 'neutral',
-                line1: line1Index + 1,
-                line2: line2Index + 1,
-                content: line
-              });
-              line1Index++;
-              line2Index++;
-            }
-          }
-        }
-        
-        setDiffResult(lineDiffs);
+        // 直接存储文件内容，由FileDiff组件处理差异
+        setFileContents({ content1, content2 });
       });
     }
   };
@@ -313,20 +247,18 @@ function App() {
                   <span className="text-sm text-gray-500">
                     已选择 {files.length} 个文件
                   </span>
-                  {diffResult.length === 0 && (
+                  {fileContents === null && (
                     <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded-full">
                       可继续添加
                     </span>
                   )}
                 </div>
-                {files.length > 0 && (
-                  <button 
-                    className="btn btn-secondary text-sm px-4 py-2"
-                    onClick={handleClearAll}
-                  >
-                    清空
-                  </button>
-                )}
+                <button 
+                  className="btn btn-secondary text-sm px-4 py-2"
+                  onClick={handleClearAll}
+                >
+                  清空
+                </button>
               </div>
               
               <div className="space-y-2 mt-3">
@@ -370,12 +302,13 @@ function App() {
           )}
         </div>
         
-        {diffResult.length > 0 && (
+        {fileContents !== null && (
           <div className="mt-8">
             <h2 className="text-xl font-semibold mb-4">对比结果</h2>
             <div className="">
               <FileDiff 
-                diffResult={diffResult} 
+                content1={fileContents.content1} 
+                content2={fileContents.content2} 
                 file1Name={files[0]?.name} 
                 file2Name={files[1]?.name} 
               />
