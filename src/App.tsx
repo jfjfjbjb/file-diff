@@ -373,7 +373,7 @@ function App() {
         {diffResult.length > 0 && (
           <div className="mt-8">
             <h2 className="text-xl font-semibold mb-4">对比结果</h2>
-            <div className="overflow-auto max-h-96">
+            <div className="">
               <FileDiff 
                 diffResult={diffResult} 
                 file1Name={files[0]?.name} 
