@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>文件差异预览 | File Diff Preview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #0a0a0f;
+      --bg-secondary: #12121a;
+      --bg-tertiary: #1a1a24;
+      --bg-card: #15151f;
+      --text-primary: #f0f0f5;
+      --text-secondary: #8a8a9a;
+      --text-muted: #4a4a5a;
+      --accent-cyan: #00d4ff;
+      --accent-cyan-dim: #00d4ff33;
+      --accent-magenta: #ff006e;
+      --accent-magenta-dim: #ff006e22;
+      --accent-green: #00ff88;
+      --accent-green-dim: #00ff8833;
+      --accent-orange: #ff9500;
+      --accent-purple: #8b5cf6;
+      --border-color: #2a2a3a;
+      --border-glow: #00d4ff44;
+      --shadow-glow: 0 0 40px #00d4ff15;
+      --radius-sm: 6px;
+      --radius-md: 12px;
+      --radius-lg: 20px;
+    }
+
+    [data-theme="light"] {
+      --bg-primary: #f5f5f7;
+      --bg-secondary: #ffffff;
+      --bg-tertiary: #eaeaef;
+      --bg-card: #ffffff;
+      --text-primary: #1a1a2e;
+      --text-secondary: #5a5a6e;
+      --text-muted: #8a8a9a;
+      --accent-cyan: #0099cc;
+      --accent-cyan-dim: #00d4ff22;
+      --accent-magenta: #e6005c;
+      --accent-magenta-dim: #ff006e15;
+      --accent-green: #00cc6a;
+      --accent-green-dim: #00ff8822;
+      --accent-orange: #e68600;
+      --accent-purple: #7040d0;
+      --border-color: #d8d8e0;
+      --border-glow: #00d4ff33;
+      --shadow-glow: 0 0 40px #00d4ff10;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .bg-grid {
+      position: fixed;
+      inset: 0;
+      background-image: 
+        linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+      background-size: 60px 60px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .bg-gradient {
+      position: fixed;
+      inset: 0;
+      background: 
+        radial-gradient(ellipse 80% 50% at 20% 40%, var(--accent-cyan-dim) 0%, transparent 50%),
+        radial-gradient(ellipse 60% 40% at 80% 60%, var(--accent-magenta-dim) 0%, transparent 50%),
+        radial-gradient(ellipse 40% 30% at 50% 80%, var(--accent-purple) 0%, transparent 50%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .noise-overlay {
+      position: fixed;
+      inset: 0;
+      background: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+      opacity: 0.03;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .container {
+      position: relative;
+      z-index: 2;
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 40px 24px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 60px;
+      animation: fadeInUp 0.8s ease-out;
+    }
+
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .logo {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .logo-icon {
+      width: 48px;
+      height: 48px;
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-magenta));
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      box-shadow: var(--shadow-glow);
+    }
+
+    .logo-text {
+      font-size: 28px;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--text-primary), var(--accent-cyan));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .subtitle {
+      color: var(--text-secondary);
+      font-size: 16px;
+      font-weight: 300;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    .preview-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      animation: fadeInUp 0.8s ease-out 0.2s both;
+      box-shadow: var(--shadow-glow);
+    }
+
+    .preview-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 24px;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .window-controls {
+      display: flex;
+      gap: 8px;
+    }
+
+    .window-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+
+    .window-dot.red { background: #ff5f56; }
+    .window-dot.yellow { background: #ffbd2e; }
+    .window-dot.green { background: #27ca40; }
+
+    .file-info {
+      display: flex;
+      gap: 24px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+    }
+
+    .file-name {
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .file-name .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent-green);
+      box-shadow: 0 0 8px var(--accent-green);
+    }
+
+    .preview-body {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      min-height: 400px;
+    }
+
+    .diff-panel {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      line-height: 1.6;
+      overflow: auto;
+    }
+
+    .diff-panel:first-child {
+      border-right: 1px solid var(--border-color);
+    }
+
+    .diff-header {
+      padding: 12px 16px;
+      background: var(--bg-tertiary);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .diff-line {
+      display: flex;
+      padding: 2px 0;
+    }
+
+    .line-number {
+      width: 50px;
+      padding: 0 12px;
+      text-align: right;
+      color: var(--text-muted);
+      background: var(--bg-secondary);
+      user-select: none;
+      flex-shrink: 0;
+    }
+
+    .line-content {
+      flex: 1;
+      padding: 0 16px;
+      white-space: pre;
+    }
+
+    .diff-line.added {
+      background: linear-gradient(90deg, var(--accent-green-dim), transparent);
+    }
+
+    .diff-line.added .line-number {
+      color: var(--accent-green);
+    }
+
+    .diff-line.removed {
+      background: linear-gradient(90deg, var(--accent-magenta-dim), transparent);
+    }
+
+    .diff-line.removed .line-number {
+      color: var(--accent-magenta);
+    }
+
+    .diff-line.changed .line-number {
+      color: var(--accent-orange);
+    }
+
+    .word-diff {
+      background: var(--accent-cyan-dim);
+      border-radius: 2px;
+      padding: 0 2px;
+    }
+
+    .stats-bar {
+      display: flex;
+      gap: 24px;
+      padding: 16px 24px;
+      background: var(--bg-secondary);
+      border-top: 1px solid var(--border-color);
+    }
+
+    .stat-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+    }
+
+    .stat-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 2px;
+    }
+
+    .stat-dot.added { background: var(--accent-green); }
+    .stat-dot.removed { background: var(--accent-magenta); }
+    .stat-dot.changed { background: var(--accent-orange); }
+
+    .stat-label {
+      color: var(--text-secondary);
+    }
+
+    .stat-value {
+      font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .actions {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      margin-top: 40px;
+      animation: fadeInUp 0.8s ease-out 0.4s both;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 28px;
+      border-radius: var(--radius-md);
+      font-family: 'Outfit', sans-serif;
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-decoration: none;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent-cyan), #0099cc);
+      color: var(--bg-primary);
+      border: none;
+      box-shadow: 0 4px 20px var(--accent-cyan-dim);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px var(--accent-cyan-dim);
+    }
+
+    .btn-secondary {
+      background: transparent;
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--accent-cyan);
+      background: var(--accent-cyan-dim);
+    }
+
+    .features {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      margin-top: 60px;
+      animation: fadeInUp 0.8s ease-out 0.6s both;
+    }
+
+    .feature-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 24px;
+      transition: all 0.3s ease;
+    }
+
+    .feature-card:hover {
+      border-color: var(--accent-cyan);
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-glow);
+    }
+
+    .feature-icon {
+      width: 40px;
+      height: 40px;
+      background: var(--bg-tertiary);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      margin-bottom: 16px;
+    }
+
+    .feature-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .feature-desc {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    @media (max-width: 768px) {
+      .preview-body {
+        grid-template-columns: 1fr;
+      }
+      
+      .diff-panel:first-child {
+        border-right: none;
+        border-bottom: 1px solid var(--border-color);
+      }
+
+      .features {
+        grid-template-columns: 1fr;
+      }
+
+      .file-info {
+        display: none;
+      }
+    }
+
+    .typing-cursor {
+      display: inline-block;
+      width: 2px;
+      height: 1em;
+      background: var(--accent-cyan);
+      margin-left: 2px;
+      animation: blink 1s infinite;
+      vertical-align: text-bottom;
+    }
+
+    @keyframes blink {
+      0%, 50% { opacity: 1; }
+      51%, 100% { opacity: 0; }
+    }
+
+    .theme-toggle {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 100;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      transition: all 0.3s ease;
+      box-shadow: var(--shadow-glow);
+    }
+
+    .theme-toggle:hover {
+      border-color: var(--accent-cyan);
+      transform: scale(1.1);
+    }
+
+    .theme-toggle .sun-icon,
+    .theme-toggle .moon-icon {
+      position: absolute;
+      transition: all 0.4s ease;
+    }
+
+    .theme-toggle .sun-icon {
+      opacity: 1;
+      transform: rotate(0deg) scale(1);
+    }
+
+    .theme-toggle .moon-icon {
+      opacity: 0;
+      transform: rotate(-90deg) scale(0.5);
+    }
+
+    [data-theme="light"] .theme-toggle .sun-icon {
+      opacity: 0;
+      transform: rotate(90deg) scale(0.5);
+    }
+
+    [data-theme="light"] .theme-toggle .moon-icon {
+      opacity: 1;
+      transform: rotate(0deg) scale(1);
+    }
+
+    [data-theme="light"] .bg-grid {
+      background-image: 
+        linear-gradient(rgba(0,0,0,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,0,0,0.03) 1px, transparent 1px);
+    }
+
+    [data-theme="light"] .bg-gradient {
+      background: 
+        radial-gradient(ellipse 80% 50% at 20% 40%, rgba(0, 212, 255, 0.08) 0%, transparent 50%),
+        radial-gradient(ellipse 60% 40% at 80% 60%, rgba(255, 0, 110, 0.05) 0%, transparent 50%),
+        radial-gradient(ellipse 40% 30% at 50% 80%, rgba(139, 92, 246, 0.08) 0%, transparent 50%);
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-grid"></div>
+  <div class="bg-gradient"></div>
+  <div class="noise-overlay"></div>
+
+  <button class="theme-toggle" id="themeToggle" aria-label="切换主题">
+    <span class="sun-icon">☀️</span>
+    <span class="moon-icon">🌙</span>
+  </button>
+
+  <div class="container">
+    <header>
+      <div class="logo">
+        <div class="logo-icon">⚡</div>
+        <span class="logo-text">FileDiff Pro</span>
+      </div>
+      <p class="subtitle">智能文件对比工具 <span class="typing-cursor"></span></p>
+    </header>
+
+    <div class="preview-card">
+      <div class="preview-header">
+        <div class="window-controls">
+          <div class="window-dot red"></div>
+          <div class="window-dot yellow"></div>
+          <div class="window-dot green"></div>
+        </div>
+        <div class="file-info">
+          <div class="file-name">
+            <span class="dot"></span>
+            original.txt
+          </div>
+          <div class="file-name">
+            <span class="dot" style="background: var(--accent-cyan); box-shadow: 0 0 8px var(--accent-cyan);"></span>
+            modified.txt
+          </div>
+        </div>
+      </div>
+
+      <div class="preview-body">
+        <div class="diff-panel">
+          <div class="diff-header">原始文件</div>
+          <div class="diff-line">
+            <span class="line-number">1</span>
+            <span class="line-content">function calculateSum(arr) {</span>
+          </div>
+          <div class="diff-line">
+            <span class="line-number">2</span>
+            <span class="line-content">  let total = 0;</span>
+          </div>
+          <div class="diff-line removed">
+            <span class="line-number">3</span>
+            <span class="line-content">  for (let i = 0; i < arr.length; i++) {</span>
+          </div>
+          <div class="diff-line removed">
+            <span class="line-number">4</span>
+            <span class="line-content">    total += arr[i];</span>
+          </div>
+          <div class="diff-line removed">
+            <span class="line-number">5</span>
+            <span class="line-content">  }</span>
+          </div>
+          <div class="diff-line">
+            <span class="line-number">6</span>
+            <span class="line-content">  return total;</span>
+          </div>
+          <div class="diff-line">
+            <span class="line-number">7</span>
+            <span class="line-content">}</span>
+          </div>
+        </div>
+
+        <div class="diff-panel">
+          <div class="diff-header">修改后</div>
+          <div class="diff-line">
+            <span class="line-number">1</span>
+            <span class="line-content">function calculateSum(arr) {</span>
+          </div>
+          <div class="diff-line changed">
+            <span class="line-number">2</span>
+            <span class="line-content">  const total = </span><span class="word-diff">arr.reduce((a, b) => a + b, 0)</span><span class="line-content">;</span>
+          </div>
+          <div class="diff-line added">
+            <span class="line-number">3</span>
+            <span class="line-content">  // 使用 reduce 更简洁</span>
+          </div>
+          <div class="diff-line">
+            <span class="line-number">4</span>
+            <span class="line-content">  return total;</span>
+          </div>
+          <div class="diff-line">
+            <span class="line-number">5</span>
+            <span class="line-content">}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="stats-bar">
+        <div class="stat-item">
+          <div class="stat-dot added"></div>
+          <span class="stat-label">新增</span>
+          <span class="stat-value">1</span>
+        </div>
+        <div class="stat-item">
+          <div class="stat-dot removed"></div>
+          <span class="stat-label">删除</span>
+          <span class="stat-value">3</span>
+        </div>
+        <div class="stat-item">
+          <div class="stat-dot changed"></div>
+          <span class="stat-label">修改</span>
+          <span class="stat-value">1</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <a href="#" class="btn btn-primary">
+        <span>🚀</span>
+        立即体验
+      </a>
+      <a href="#" class="btn btn-secondary">
+        <span>📄</span>
+        查看文档
+      </a>
+    </div>
+
+    <div class="features">
+      <div class="feature-card">
+        <div class="feature-icon">⚡</div>
+        <div class="feature-title">闪电般快速</div>
+        <div class="feature-desc">采用先进的 diff 算法，瞬间完成大文件对比</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🎨</div>
+        <div class="feature-title">精美可视化</div>
+        <div class="feature-desc">直观的差异展示，语法高亮让变更一目了然</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔒</div>
+        <div class="feature-title">安全可靠</div>
+        <div class="feature-desc">本地处理您的文件，数据绝不离开您的设备</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      const themeToggle = document.getElementById('themeToggle');
+      const savedTheme = localStorage.getItem('theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', savedTheme);
+
+      themeToggle.addEventListener('click', function() {
+        const currentTheme = document.documentElement.getAttribute('data-theme');
+        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', newTheme);
+        localStorage.setItem('theme', newTheme);
+      });
+    })();
+  </script>
+</body>
+</html>

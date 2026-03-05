@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import FileDiff from './components/FileDiff';
 
 /**
@@ -15,6 +15,26 @@ function App() {
   // 常量定义
   const SUPPORTED_EXTENSIONS = ['.txt', '.md', '.js', '.ts', '.jsx', '.tsx', '.css', '.scss', '.html', '.json', '.xml', '.csv', '.log', '.py', '.java', '.c', '.cpp', '.h', '.hpp'];
   const MAX_FILE_SIZE = 10 * 1024 * 1024;
+
+  // 主题切换逻辑
+  useEffect(() => {
+    const themeToggleHeader = document.getElementById('themeToggleHeader');
+    
+    if (themeToggleHeader) {
+      const handleThemeToggle = () => {
+        const currentTheme = document.documentElement.getAttribute('data-theme');
+        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', newTheme);
+        localStorage.setItem('theme', newTheme);
+      };
+      
+      themeToggleHeader.addEventListener('click', handleThemeToggle);
+      
+      return () => {
+        themeToggleHeader.removeEventListener('click', handleThemeToggle);
+      };
+    }
+  }, []);
 
   /**
    * 处理多个文件选择
@@ -162,19 +182,66 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
-      <header className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 shadow-lg py-4">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h1 className="text-3xl md:text-4xl font-bold font-['Inter'] tracking-tight text-white drop-shadow-md">
-            File-Diff
-          </h1>
-          <p className="mt-1 text-sm text-blue-50 font-medium">专业文件对比工具</p>
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: 'var(--bg-primary)' }}>
+      <div className="bg-grid"></div>
+      <div className="bg-gradient"></div>
+      <div className="noise-overlay"></div>
+      <header>
+
+        <button 
+          className="theme-toggle-header"
+          id="themeToggleHeader"
+          aria-label="切换主题"
+        >
+          <span className="sun-icon">☀️</span>
+          <span className="moon-icon">🌙</span>
+        </button>
+        <div style={{
+          position: 'absolute',
+          inset: 0,
+          background: 'radial-gradient(circle at 30% 50%, rgba(255,255,255,0.04) 0%, transparent 50%)',
+          pointerEvents: 'none'
+        }}></div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8" style={{ position: 'relative', zIndex: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <div style={{
+              width: '48px',
+              height: '48px',
+              background: 'rgba(255,255,255,0.2)',
+              borderRadius: '12px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '24px',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(255,255,255,0.3)'
+            }} className="header-icon">
+              ⚡
+            </div>
+            <div>
+              <h1 
+                className="text-3xl font-bold tracking-tight header-title"
+                style={{ 
+                  fontFamily: "'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif",
+                  margin: 0,
+                  lineHeight: 1.2
+                }}
+              >
+                FileDiff Pro
+              </h1>
+              <p className="mt-1 text-sm header-subtitle" style={{ fontWeight: 500, margin: 0 }}>
+                专业文件对比工具
+              </p>
+            </div>
+          </div>
         </div>
       </header>
       
       <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
         <div className="mb-8">
-          <h2 className="text-xl font-semibold mb-4">选择文件</h2>
+          <h2 className="text-xl font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>
+            选择文件
+          </h2>
           <div
             className="upload-area w-full"
             key={uploadKey}
@@ -214,26 +281,39 @@ function App() {
               className="cursor-pointer"
             >
               <div className="flex flex-col items-center justify-center">
-                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
+                <div 
+                  className="w-16 h-16 rounded-full flex items-center justify-center mb-4"
+                  style={{ 
+                    background: 'var(--accent-cyan-dim)',
+                    border: '2px solid var(--accent-cyan)'
+                  }}
+                >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    className="h-8 w-8 text-primary"
+                    className="h-8 w-8"
                     fill="none"
                     viewBox="0 0 24 24"
-                    stroke="currentColor"
+                    stroke="var(--accent-cyan)"
+                    strokeWidth={2}
                   >
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
-                      strokeWidth={2}
                       d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
                     />
                   </svg>
                 </div>
-                <p className="text-gray-600 mb-2">
+                <p className="mb-2" style={{ color: 'var(--text-secondary)' }}>
                   {files.length > 0 ? `已选择 ${files.length} 个文件` : '点击或拖放文件到此处'}
                 </p>
-                <p className="text-xs text-gray-500 bg-yellow-50 px-3 py-2 rounded border border-yellow-100 inline-block">
+                <p 
+                  className="text-xs px-3 py-2 rounded border inline-block"
+                  style={{ 
+                    color: 'var(--text-muted)',
+                    backgroundColor: 'var(--bg-tertiary)',
+                    borderColor: 'var(--border-color)'
+                  }}
+                >
                   📝 仅支持文本文件（最大 10MB）| .txt, .md, .js, .ts, .json 等
                 </p>
               </div>
@@ -244,11 +324,17 @@ function App() {
             <>
               <div className="flex items-center justify-between mt-4">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-500">
+                  <span className="text-sm" style={{ color: 'var(--text-muted)' }}>
                     已选择 {files.length} 个文件
                   </span>
                   {fileContents === null && (
-                    <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded-full">
+                    <span 
+                      className="text-xs px-2 py-1 rounded-full"
+                      style={{ 
+                        color: 'var(--text-muted)',
+                        backgroundColor: 'var(--bg-tertiary)'
+                      }}
+                    >
                       可继续添加
                     </span>
                   )}
@@ -263,20 +349,49 @@ function App() {
               
               <div className="space-y-2 mt-3">
                 {files.map((file, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 bg-white rounded-md shadow-sm border border-gray-100">
+                  <div 
+                    key={index} 
+                    className="flex items-center justify-between p-3 rounded-md shadow-sm"
+                    style={{ 
+                      backgroundColor: 'var(--bg-card)',
+                      border: '1px solid var(--border-color)'
+                    }}
+                  >
                     <div className="flex items-center gap-3 overflow-hidden">
-                      <div className="w-8 h-8 bg-blue-100 rounded flex items-center justify-center flex-shrink-0">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      <div 
+                        className="w-8 h-8 rounded flex items-center justify-center flex-shrink-0"
+                        style={{ background: 'var(--accent-cyan-dim)' }}
+                      >
+                        <svg 
+                          xmlns="http://www.w3.org/2000/svg" 
+                          className="h-4 w-4" 
+                          fill="none" 
+                          viewBox="0 0 24 24" 
+                          stroke="var(--accent-cyan)"
+                          strokeWidth={2}
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                         </svg>
                       </div>
                       <div className="overflow-hidden">
-                        <p className="text-sm font-medium text-gray-700 truncate" title={file.name}>{file.name}</p>
-                        <p className="text-xs text-gray-500">{Math.round(file.size / 1024)} KB</p>
+                        <p 
+                          className="text-sm font-medium truncate" 
+                          title={file.name}
+                          style={{ color: 'var(--text-primary)' }}
+                        >
+                          {file.name}
+                        </p>
+                        <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                          {Math.round(file.size / 1024)} KB
+                        </p>
                       </div>
                     </div>
                     <button 
-                      className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1.5 rounded transition-colors flex-shrink-0"
+                      className="file-remove-btn p-1.5 rounded transition-colors flex-shrink-0"
+                      style={{ 
+                        color: 'var(--accent-magenta)',
+                        background: 'transparent'
+                      }}
                       onClick={() => handleRemoveFile(index)}
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -290,13 +405,27 @@ function App() {
           )}
           
           {errorMessage && (
-            <div className="mt-4 p-3 bg-red-50 text-red-600 rounded-md border border-red-100">
+            <div 
+              className="mt-4 p-3 rounded-md border"
+              style={{ 
+                color: 'var(--accent-magenta)',
+                backgroundColor: 'var(--accent-magenta-dim)',
+                borderColor: 'var(--accent-magenta)'
+              }}
+            >
               {errorMessage}
             </div>
           )}
           
           {warningMessage && (
-            <div className="mt-4 p-3 bg-yellow-50 text-yellow-700 rounded-md border border-yellow-100 whitespace-pre-line">
+            <div 
+              className="mt-4 p-3 rounded-md border whitespace-pre-line"
+              style={{ 
+                color: 'var(--accent-orange)',
+                backgroundColor: 'rgba(255, 149, 0, 0.1)',
+                borderColor: 'var(--accent-orange)'
+              }}
+            >
               {warningMessage}
             </div>
           )}
@@ -304,7 +433,9 @@ function App() {
         
         {fileContents !== null && (
           <div className="mt-8">
-            <h2 className="text-xl font-semibold mb-4">对比结果</h2>
+            <h2 className="text-xl font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>
+              对比结果
+            </h2>
             <div className="">
               <FileDiff 
                 content1={fileContents.content1} 
@@ -317,9 +448,17 @@ function App() {
         )}
       </main>
       
-      <footer className="bg-white shadow-inner mt-12">
+      <footer 
+        className="mt-12"
+        style={{ 
+          backgroundColor: 'var(--bg-secondary)',
+          borderTop: '1px solid var(--border-color)'
+        }}
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <p className="text-center text-sm text-gray-600">File-Diff © 2026</p>
+          <p className="text-center text-sm" style={{ color: 'var(--text-muted)' }}>
+            FileDiff Pro © 2026
+          </p>
         </div>
       </footer>
     </div>
