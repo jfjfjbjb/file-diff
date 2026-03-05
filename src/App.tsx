@@ -204,23 +204,23 @@ function App() {
         }}></div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8" style={{ position: 'relative', zIndex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <div style={{
-              width: '48px',
-              height: '48px',
-              background: 'rgba(255,255,255,0.2)',
-              borderRadius: '12px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '24px',
-              backdropFilter: 'blur(10px)',
-              border: '1px solid rgba(255,255,255,0.3)'
-            }} className="header-icon">
+            <div 
+              className="header-icon"
+              style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '24px'
+              }}
+            >
               ⚡
             </div>
             <div>
               <h1 
-                className="text-3xl font-bold tracking-tight header-title"
+                className="text-2xl font-bold tracking-tight header-title"
                 style={{ 
                   fontFamily: "'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif",
                   margin: 0,
