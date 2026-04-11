@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
-import FileDiff from './components/FileDiff';
+import { useState, useEffect } from "react";
+import FileDiff from "./components/FileDiff";
+import logo from "/logo.svg";
 
 /**
  * 主应用组件
@@ -7,31 +8,55 @@ import FileDiff from './components/FileDiff';
 function App() {
   // 状态管理
   const [files, setFiles] = useState<File[]>([]);
-  const [fileContents, setFileContents] = useState<{ content1: string; content2: string } | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string>('');
+  const [fileContents, setFileContents] = useState<{
+    content1: string;
+    content2: string;
+  } | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string>("");
   const [uploadKey, setUploadKey] = useState<number>(0);
-  const [warningMessage, setWarningMessage] = useState<string>('');
-  
+  const [warningMessage, setWarningMessage] = useState<string>("");
+
   // 常量定义
-  const SUPPORTED_EXTENSIONS = ['.txt', '.md', '.js', '.ts', '.jsx', '.tsx', '.css', '.scss', '.html', '.json', '.xml', '.csv', '.log', '.py', '.java', '.c', '.cpp', '.h', '.hpp'];
+  const SUPPORTED_EXTENSIONS = [
+    ".txt",
+    ".md",
+    ".js",
+    ".ts",
+    ".jsx",
+    ".tsx",
+    ".css",
+    ".scss",
+    ".html",
+    ".json",
+    ".xml",
+    ".csv",
+    ".log",
+    ".py",
+    ".java",
+    ".c",
+    ".cpp",
+    ".h",
+    ".hpp",
+  ];
   const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
   // 主题切换逻辑
   useEffect(() => {
-    const themeToggleHeader = document.getElementById('themeToggleHeader');
-    
+    const themeToggleHeader = document.getElementById("themeToggleHeader");
+
     if (themeToggleHeader) {
       const handleThemeToggle = () => {
-        const currentTheme = document.documentElement.getAttribute('data-theme');
-        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-        document.documentElement.setAttribute('data-theme', newTheme);
-        localStorage.setItem('theme', newTheme);
+        const currentTheme =
+          document.documentElement.getAttribute("data-theme");
+        const newTheme = currentTheme === "dark" ? "light" : "dark";
+        document.documentElement.setAttribute("data-theme", newTheme);
+        localStorage.setItem("theme", newTheme);
       };
-      
-      themeToggleHeader.addEventListener('click', handleThemeToggle);
-      
+
+      themeToggleHeader.addEventListener("click", handleThemeToggle);
+
       return () => {
-        themeToggleHeader.removeEventListener('click', handleThemeToggle);
+        themeToggleHeader.removeEventListener("click", handleThemeToggle);
       };
     }
   }, []);
@@ -40,64 +65,69 @@ function App() {
    * 处理多个文件选择
    */
   const handleMultipleFileChange = (selectedFiles: File[]) => {
-    setErrorMessage('');
-    setWarningMessage('');
-    
+    setErrorMessage("");
+    setWarningMessage("");
+
     const validFiles: File[] = [];
     const warnings: string[] = [];
-    
+
     // 验证文件
     for (const file of selectedFiles) {
-      const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase() || '';
+      const fileExtension =
+        "." + file.name.split(".").pop()?.toLowerCase() || "";
       const isSupported = SUPPORTED_EXTENSIONS.includes(fileExtension);
-      
+
       if (!isSupported) {
         warnings.push(`"${file.name}"：不支持的文件类型（仅支持文本文件）`);
         continue;
       }
-      
+
       if (file.size > MAX_FILE_SIZE) {
         warnings.push(`"${file.name}"：文件过大（最大限制 10MB）`);
         continue;
       }
-      
-      const isDuplicate = files.some(f => f.name === file.name && f.size === file.size);
+
+      const isDuplicate = files.some(
+        (f) => f.name === file.name && f.size === file.size,
+      );
       if (isDuplicate) {
         warnings.push(`"${file.name}"：文件已存在`);
         continue;
       }
-      
+
       validFiles.push(file);
     }
-    
+
     // 处理警告信息
     if (warnings.length > 0) {
-      setWarningMessage(warnings.join('\n'));
+      setWarningMessage(warnings.join("\n"));
     }
-    
+
     // 处理无效文件
     if (validFiles.length === 0) {
       if (warnings.length === 0) {
-        setErrorMessage('请上传有效的文件');
+        setErrorMessage("请上传有效的文件");
       }
       return;
     }
-    
+
     // 更新文件列表，最多保留2个文件
     const newFiles = [...files, ...validFiles].slice(0, 2);
     setFiles(newFiles);
-    
+
     // 处理文件数量不足的情况
     if (newFiles.length < 2) {
-      setErrorMessage(`已选择 ${newFiles.length} 个文件，还需选择 ${2 - newFiles.length} 个文件`);
+      setErrorMessage(
+        `已选择 ${newFiles.length} 个文件，还需选择 ${2 - newFiles.length} 个文件`,
+      );
       return;
     }
-    
-    setErrorMessage('');
-    
+
+    setErrorMessage("");
+
     // 读取文件内容
     const [file1, file2] = newFiles;
-    
+
     Promise.all([
       new Promise<string>((resolve) => {
         const reader1 = new FileReader();
@@ -114,7 +144,7 @@ function App() {
           resolve(content);
         };
         reader2.readAsText(file2);
-      })
+      }),
     ]).then(([content1, content2]) => {
       // 直接存储文件内容，由FileDiff组件处理差异
       setFileContents({ content1, content2 });
@@ -127,9 +157,9 @@ function App() {
   const handleClearAll = () => {
     setFiles([]);
     setFileContents(null);
-    setErrorMessage('');
-    setWarningMessage('');
-    setUploadKey(prev => prev + 1);
+    setErrorMessage("");
+    setWarningMessage("");
+    setUploadKey((prev) => prev + 1);
   };
 
   /**
@@ -138,25 +168,27 @@ function App() {
   const handleRemoveFile = (index: number) => {
     const newFiles = files.filter((_, i) => i !== index);
     setFiles(newFiles);
-    
+
     if (newFiles.length === 0) {
       // 清空所有状态
       setFileContents(null);
-      setErrorMessage('');
-      setWarningMessage('');
-      setUploadKey(prev => prev + 1);
+      setErrorMessage("");
+      setWarningMessage("");
+      setUploadKey((prev) => prev + 1);
     } else if (newFiles.length < 2) {
       // 文件数量不足，清空差异结果
       setFileContents(null);
-      setErrorMessage(`已选择 ${newFiles.length} 个文件，还需选择 ${2 - newFiles.length} 个文件`);
-      setWarningMessage('');
+      setErrorMessage(
+        `已选择 ${newFiles.length} 个文件，还需选择 ${2 - newFiles.length} 个文件`,
+      );
+      setWarningMessage("");
     } else {
       // 文件数量足够，重新读取文件内容
-      setErrorMessage('');
-      setWarningMessage('');
-      
+      setErrorMessage("");
+      setWarningMessage("");
+
       const [file1, file2] = newFiles;
-      
+
       Promise.all([
         new Promise<string>((resolve) => {
           const reader1 = new FileReader();
@@ -173,7 +205,7 @@ function App() {
             resolve(content);
           };
           reader2.readAsText(file2);
-        })
+        }),
       ]).then(([content1, content2]) => {
         // 直接存储文件内容，由FileDiff组件处理差异
         setFileContents({ content1, content2 });
@@ -182,13 +214,15 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ backgroundColor: 'var(--bg-primary)' }}>
+    <div
+      className="min-h-screen flex flex-col"
+      style={{ backgroundColor: "var(--bg-primary)" }}
+    >
       <div className="bg-grid"></div>
       <div className="bg-gradient"></div>
       <div className="noise-overlay"></div>
       <header>
-
-        <button 
+        <button
           className="theme-toggle-header"
           id="themeToggleHeader"
           aria-label="切换主题"
@@ -196,50 +230,64 @@ function App() {
           <span className="sun-icon">☀️</span>
           <span className="moon-icon">🌙</span>
         </button>
-        <div style={{
-          position: 'absolute',
-          inset: 0,
-          background: 'radial-gradient(circle at 30% 50%, rgba(255,255,255,0.04) 0%, transparent 50%)',
-          pointerEvents: 'none'
-        }}></div>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8" style={{ position: 'relative', zIndex: 1 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <div 
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            background:
+              "radial-gradient(circle at 30% 50%, rgba(255,255,255,0.04) 0%, transparent 50%)",
+            pointerEvents: "none",
+          }}
+        ></div>
+        <div
+          className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
+          style={{ position: "relative", zIndex: 1 }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            {/* <div 
               className="header-icon"
               style={{
-                width: '48px',
-                height: '48px',
-                borderRadius: '12px',
+                width: '36px',
+                height: '36px',
+                borderRadius: '8px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: '24px'
+                fontSize: '18px'
               }}
             >
               ⚡
-            </div>
+            </div> */}
+            <img src={logo} alt="FileDiff Pro" width="36px" />
             <div>
-              <h1 
-                className="text-2xl font-bold tracking-tight header-title"
-                style={{ 
-                  fontFamily: "'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif",
+              <h1
+                className="text-lg font-bold tracking-tight header-title"
+                style={{
+                  fontFamily:
+                    "'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif",
                   margin: 0,
-                  lineHeight: 1.2
+                  lineHeight: 1.2,
                 }}
               >
                 FileDiff Pro
               </h1>
-              <p className="mt-1 text-sm header-subtitle" style={{ fontWeight: 500, margin: 0 }}>
+              <p
+                className="mt-0.5 text-xs header-subtitle"
+                style={{ fontWeight: 500, margin: 0 }}
+              >
                 专业文件对比工具
               </p>
             </div>
           </div>
         </div>
       </header>
-      
-      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
-        <div className="mb-8">
-          <h2 className="text-xl font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>
+
+      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 w-full">
+        <div className="mb-4">
+          <h2
+            className="text-sm font-semibold mb-2"
+            style={{ color: "var(--text-primary)" }}
+          >
             选择文件
           </h2>
           <div
@@ -247,15 +295,15 @@ function App() {
             key={uploadKey}
             onDragOver={(e) => {
               e.preventDefault();
-              e.currentTarget.classList.add('drag-active');
+              e.currentTarget.classList.add("drag-active");
             }}
             onDragLeave={(e) => {
               e.preventDefault();
-              e.currentTarget.classList.remove('drag-active');
+              e.currentTarget.classList.remove("drag-active");
             }}
             onDrop={(e) => {
               e.preventDefault();
-              e.currentTarget.classList.remove('drag-active');
+              e.currentTarget.classList.remove("drag-active");
               if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
                 const fileList = Array.from(e.dataTransfer.files);
                 handleMultipleFileChange(fileList);
@@ -276,21 +324,18 @@ function App() {
               }}
               multiple
             />
-            <label
-              htmlFor="file-upload"
-              className="cursor-pointer"
-            >
+            <label htmlFor="file-upload" className="cursor-pointer">
               <div className="flex flex-col items-center justify-center">
-                <div 
-                  className="w-16 h-16 rounded-full flex items-center justify-center mb-4"
-                  style={{ 
-                    background: 'var(--accent-cyan-dim)',
-                    border: '2px solid var(--accent-cyan)'
+                <div
+                  className="w-10 h-10 rounded-full flex items-center justify-center mb-2"
+                  style={{
+                    background: "var(--accent-cyan-dim)",
+                    border: "2px solid var(--accent-cyan)",
                   }}
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    className="h-8 w-8"
+                    className="h-5 w-5"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="var(--accent-cyan)"
@@ -303,15 +348,20 @@ function App() {
                     />
                   </svg>
                 </div>
-                <p className="mb-2" style={{ color: 'var(--text-secondary)' }}>
-                  {files.length > 0 ? `已选择 ${files.length} 个文件` : '点击或拖放文件到此处'}
+                <p
+                  className="mb-1 text-xs"
+                  style={{ color: "var(--text-secondary)" }}
+                >
+                  {files.length > 0
+                    ? `已选择 ${files.length} 个文件`
+                    : "点击或拖放文件到此处"}
                 </p>
-                <p 
-                  className="text-xs px-3 py-2 rounded border inline-block"
-                  style={{ 
-                    color: 'var(--text-muted)',
-                    backgroundColor: 'var(--bg-tertiary)',
-                    borderColor: 'var(--border-color)'
+                <p
+                  className="text-xs px-2 py-1 rounded border inline-block"
+                  style={{
+                    color: "var(--text-muted)",
+                    backgroundColor: "var(--bg-tertiary)",
+                    borderColor: "var(--border-color)",
                   }}
                 >
                   📝 仅支持文本文件（最大 10MB）| .txt, .md, .js, .ts, .json 等
@@ -319,83 +369,104 @@ function App() {
               </div>
             </label>
           </div>
-          
+
           {files.length > 0 && (
             <>
-              <div className="flex items-center justify-between mt-4">
+              <div className="flex items-center justify-between mt-2">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                  <span
+                    className="text-xs"
+                    style={{ color: "var(--text-muted)" }}
+                  >
                     已选择 {files.length} 个文件
                   </span>
                   {fileContents === null && (
-                    <span 
-                      className="text-xs px-2 py-1 rounded-full"
-                      style={{ 
-                        color: 'var(--text-muted)',
-                        backgroundColor: 'var(--bg-tertiary)'
+                    <span
+                      className="text-xs px-1.5 py-0.5 rounded-full"
+                      style={{
+                        color: "var(--text-muted)",
+                        backgroundColor: "var(--bg-tertiary)",
                       }}
                     >
                       可继续添加
                     </span>
                   )}
                 </div>
-                <button 
-                  className="btn btn-secondary text-sm px-4 py-2"
+                <button
+                  className="btn btn-secondary text-xs px-2.5 py-1"
                   onClick={handleClearAll}
                 >
                   清空
                 </button>
               </div>
-              
-              <div className="space-y-2 mt-3">
+
+              <div className="space-y-1.5 mt-1.5">
                 {files.map((file, index) => (
-                  <div 
-                    key={index} 
-                    className="flex items-center justify-between p-3 rounded-md shadow-sm"
-                    style={{ 
-                      backgroundColor: 'var(--bg-card)',
-                      border: '1px solid var(--border-color)'
+                  <div
+                    key={index}
+                    className="flex items-center justify-between p-2 rounded-md shadow-sm"
+                    style={{
+                      backgroundColor: "var(--bg-card)",
+                      border: "1px solid var(--border-color)",
                     }}
                   >
-                    <div className="flex items-center gap-3 overflow-hidden">
-                      <div 
-                        className="w-8 h-8 rounded flex items-center justify-center flex-shrink-0"
-                        style={{ background: 'var(--accent-cyan-dim)' }}
+                    <div className="flex items-center gap-2 overflow-hidden">
+                      <div
+                        className="w-6 h-6 rounded flex items-center justify-center flex-shrink-0"
+                        style={{ background: "var(--accent-cyan-dim)" }}
                       >
-                        <svg 
-                          xmlns="http://www.w3.org/2000/svg" 
-                          className="h-4 w-4" 
-                          fill="none" 
-                          viewBox="0 0 24 24" 
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-3.5 w-3.5"
+                          fill="none"
+                          viewBox="0 0 24 24"
                           stroke="var(--accent-cyan)"
                           strokeWidth={2}
                         >
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                          />
                         </svg>
                       </div>
                       <div className="overflow-hidden">
-                        <p 
-                          className="text-sm font-medium truncate" 
+                        <p
+                          className="text-xs font-medium truncate"
                           title={file.name}
-                          style={{ color: 'var(--text-primary)' }}
+                          style={{ color: "var(--text-primary)" }}
                         >
                           {file.name}
                         </p>
-                        <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                        <p
+                          className="text-xs"
+                          style={{ color: "var(--text-muted)" }}
+                        >
                           {Math.round(file.size / 1024)} KB
                         </p>
                       </div>
                     </div>
-                    <button 
-                      className="file-remove-btn p-1.5 rounded transition-colors flex-shrink-0"
-                      style={{ 
-                        color: 'var(--accent-magenta)',
-                        background: 'transparent'
+                    <button
+                      className="file-remove-btn p-1 rounded transition-colors flex-shrink-0"
+                      style={{
+                        color: "var(--accent-magenta)",
+                        background: "transparent",
                       }}
                       onClick={() => handleRemoveFile(index)}
                     >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-3.5 w-3.5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                        />
                       </svg>
                     </button>
                   </div>
@@ -403,60 +474,66 @@ function App() {
               </div>
             </>
           )}
-          
+
           {errorMessage && (
-            <div 
-              className="mt-4 p-3 rounded-md border"
-              style={{ 
-                color: 'var(--accent-magenta)',
-                backgroundColor: 'var(--accent-magenta-dim)',
-                borderColor: 'var(--accent-magenta)'
+            <div
+              className="mt-2 p-1.5 rounded border text-xs"
+              style={{
+                color: "var(--accent-magenta)",
+                backgroundColor: "var(--accent-magenta-dim)",
+                borderColor: "var(--accent-magenta)",
               }}
             >
               {errorMessage}
             </div>
           )}
-          
+
           {warningMessage && (
-            <div 
-              className="mt-4 p-3 rounded-md border whitespace-pre-line"
-              style={{ 
-                color: 'var(--accent-orange)',
-                backgroundColor: 'rgba(255, 149, 0, 0.1)',
-                borderColor: 'var(--accent-orange)'
+            <div
+              className="mt-2 p-1.5 rounded border whitespace-pre-line text-xs"
+              style={{
+                color: "var(--accent-orange)",
+                backgroundColor: "rgba(255, 149, 0, 0.1)",
+                borderColor: "var(--accent-orange)",
               }}
             >
               {warningMessage}
             </div>
           )}
         </div>
-        
+
         {fileContents !== null && (
-          <div className="mt-8">
-            <h2 className="text-xl font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>
+          <div className="mt-4">
+            <h2
+              className="text-sm font-semibold mb-2"
+              style={{ color: "var(--text-primary)" }}
+            >
               对比结果
             </h2>
             <div className="">
-              <FileDiff 
-                content1={fileContents.content1} 
-                content2={fileContents.content2} 
-                file1Name={files[0]?.name} 
-                file2Name={files[1]?.name} 
+              <FileDiff
+                content1={fileContents.content1}
+                content2={fileContents.content2}
+                file1Name={files[0]?.name}
+                file2Name={files[1]?.name}
               />
             </div>
           </div>
         )}
       </main>
-      
-      <footer 
-        className="mt-12"
-        style={{ 
-          backgroundColor: 'var(--bg-secondary)',
-          borderTop: '1px solid var(--border-color)'
+
+      <footer
+        className="mt-8"
+        style={{
+          backgroundColor: "var(--bg-secondary)",
+          borderTop: "1px solid var(--border-color)",
         }}
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <p className="text-center text-sm" style={{ color: 'var(--text-muted)' }}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <p
+            className="text-center text-xs"
+            style={{ color: "var(--text-muted)" }}
+          >
             FileDiff Pro © 2026
           </p>
         </div>
